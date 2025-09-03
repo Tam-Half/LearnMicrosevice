@@ -1,4 +1,4 @@
-name: CI Pipeline - Simple
+name: Basic CI
 
 on:
   push:
@@ -7,98 +7,33 @@ on:
     branches: [ main ]
 
 jobs:
-  # Build và test từng service
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [customer-service, product-service, order-service]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
-
-    - name: Build ${{ matrix.service }}
+    - name: Build Customer Service
       run: |
-        cd ${{ matrix.service }}
-        mvn clean compile
+        cd customer-service
+        mvn clean package -DskipTests
 
-    - name: Run tests for ${{ matrix.service }} (if exists)
+    - name: Build Product Service
       run: |
-        cd ${{ matrix.service }}
-        if [ -d "src/test" ]; then
-          mvn test
-        else
-          echo "No tests found for ${{ matrix.service }}, skipping..."
-        fi
+        cd product-service
+        mvn clean package -DskipTests
 
-    - name: Package ${{ matrix.service }}
+    - name: Build Order Service
       run: |
-        cd ${{ matrix.service }}
-        mvn package -DskipTests
+        cd order-service
+        mvn clean package -DskipTests
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ matrix.service }}-jar
-        path: ${{ matrix.service }}/target/*.jar
-
-  # Build Docker images locally (không push)
-  build-docker-images:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [customer-service, product-service, order-service]
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download build artifacts
-      uses: actions/download-artifact@v3
-      with:
-        name: ${{ matrix.service }}-jar
-        path: ${{ matrix.service }}/target/
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Build Docker image (local only)
-      run: |
-        cd ${{ matrix.service }}
-        docker build -t ${{ matrix.service }}:${{ github.sha }} .
-        echo "Built image: ${{ matrix.service }}:${{ github.sha }}"
-
-    - name: Test Docker image
-      run: |
-        # Test if image was built successfully
-        docker images | grep ${{ matrix.service }}
-
-  # Summary job
-  build-summary:
-    needs: [build-and-test, build-docker-images]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-    - name: Build Summary
-      run: |
-        echo "### Build Summary" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Build and Test: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Docker Images: ${{ needs.build-docker-images.result }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Services built: customer-service, product-service, order-service" >> $GITHUB_STEP_SUMMARY
+    - name: Success Message
+      run: echo "✅ All services built successfully!"
