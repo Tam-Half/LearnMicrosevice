@@ -1,0 +1,112 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - my-network
+
+  eureka:
+    build: ./EurekaServer
+    image: eurekaserver:latest
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8761" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - my-network
+
+  apigateway:
+    build: ./apigateway
+    image: apigateway:latest
+    container_name: apigateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+    depends_on:
+      eureka:
+        condition: service_healthy
+    networks:
+      - my-network
+
+  orderservice:
+    build: ./OrderService
+    image: orderservice:latest
+    container_name: orderservice
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://host.docker.internal:1433;databaseName=OrderDB;encrypt=false
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=sapassword
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      eureka:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - my-network
+
+  customerservice:
+    build: ./CustomerService
+    image: customerservice:latest
+    container_name: customerservice
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://host.docker.internal:1433;databaseName=CustomerDB;encrypt=false
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=sapassword
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      eureka:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - my-network
+
+  productservice:
+    build: ./ProductService
+    image: productservice:latest
+    container_name: productservice
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://host.docker.internal:1433;databaseName=ProductDB;encrypt=false
+      - SPRING_DATASOURCE_USERNAME=sa
+      - SPRING_DATASOURCE_PASSWORD=sapassword
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+    depends_on:
+      eureka:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - my-network
+
+networks:
+  my-network:
+    driver: bridge
