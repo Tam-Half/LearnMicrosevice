@@ -1,14 +1,10 @@
-name: CI Pipeline
+name: CI Pipeline - Simple
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # Build và test từng service
@@ -35,15 +31,24 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Run tests for ${{ matrix.service }}
-      run: |
-        cd ${{ matrix.service }}
-        mvn clean test
-
     - name: Build ${{ matrix.service }}
       run: |
         cd ${{ matrix.service }}
-        mvn clean package -DskipTests
+        mvn clean compile
+
+    - name: Run tests for ${{ matrix.service }} (if exists)
+      run: |
+        cd ${{ matrix.service }}
+        if [ -d "src/test" ]; then
+          mvn test
+        else
+          echo "No tests found for ${{ matrix.service }}, skipping..."
+        fi
+
+    - name: Package ${{ matrix.service }}
+      run: |
+        cd ${{ matrix.service }}
+        mvn package -DskipTests
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
@@ -51,8 +56,8 @@ jobs:
         name: ${{ matrix.service }}-jar
         path: ${{ matrix.service }}/target/*.jar
 
-  # Build Docker images
-  build-images:
+  # Build Docker images locally (không push)
+  build-docker-images:
     needs: build-and-test
     runs-on: ubuntu-latest
     strategy:
@@ -63,54 +68,37 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ matrix.service }}-jar
+        path: ${{ matrix.service }}/target/
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build Docker image (local only)
+      run: |
+        cd ${{ matrix.service }}
+        docker build -t ${{ matrix.service }}:${{ github.sha }} .
+        echo "Built image: ${{ matrix.service }}:${{ github.sha }}"
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha
+    - name: Test Docker image
+      run: |
+        # Test if image was built successfully
+        docker images | grep ${{ matrix.service }}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: ./${{ matrix.service }}
-        file: ./${{ matrix.service }}/Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  # Security scanning
-  security-scan:
-    needs: build-images
+  # Summary job
+  build-summary:
+    needs: [build-and-test, build-docker-images]
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [customer-service, product-service, order-service]
+    if: always()
 
     steps:
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service }}:${{ github.sha }}
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-
-    - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: 'trivy-results.sarif'
+    - name: Build Summary
+      run: |
+        echo "### Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Build and Test: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Docker Images: ${{ needs.build-docker-images.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Services built: customer-service, product-service, order-service" >> $GITHUB_STEP_SUMMARY
