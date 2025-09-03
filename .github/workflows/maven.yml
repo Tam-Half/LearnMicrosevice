@@ -22,17 +22,17 @@ jobs:
 
     - name: Build Customer Service
       run: |
-        cd customer-service
+        cd CustomerService
         mvn clean package -DskipTests
 
     - name: Build Product Service
       run: |
-        cd product-service
+        cd ProductService
         mvn clean package -DskipTests
 
     - name: Build Order Service
       run: |
-        cd order-service
+        cd OrderService
         mvn clean package -DskipTests
 
     - name: Success Message
