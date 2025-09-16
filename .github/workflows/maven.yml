@@ -53,6 +53,7 @@ jobs:
       - name: Build Docker image 
         if: ${{ steps.maven-build.outcome == 'success' }}
         run: |
+          cd OrderService
           docker build -t ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
 
       - name: Push Docker image to Docker Hub
