@@ -12,27 +12,22 @@ env:
   DOCKER_IMAGE: docker-image
   JAVA_VERSION: '17'
 jobs:
-  build-and-test:
+  build-docker:
     runs-on: ubuntu-latest
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ env.JAVA_VERSION }}
-        distribution: 'temurin'
-        cache: maven
-      
-    - name: Build Order Service
-      run: |
-        cd  ${{env.SERVICE_NAME}}
-        mvn clean install
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with: 
+        username:${{secrets.DOCKER_USERNAME}}
+        password:${{secrets.DOCKER_PASSWD}}
        
-    - name: Success Message
-      run: echo "✅ Order services built successfully!"
-  build-docker:
+    - name:
+
+
+       
+ 
+    
         
       
