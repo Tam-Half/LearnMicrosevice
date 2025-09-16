@@ -7,7 +7,8 @@ on:
     branches: [ main ]
 
 env: 
-  SERVICE_NAME: OrderService
+  SERVICE_NAME: orderservice
+  
   DOCKER_REGISTRY: registry
   DOCKER_IMAGE: docker-image
   JAVA_VERSION: '17'
