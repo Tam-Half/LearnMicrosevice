@@ -28,7 +28,10 @@ jobs:
 
       - name: Build maven 
         id: maven-build
-        run: mvn clean install -B
+       
+        run: |
+          cd OrderService
+          mvn clean install -B
         
       - name: Check Maven Build Status
         if: ${{ steps.maven-build.outcome != 'success' }}  # Kiểm tra nếu Maven thất bại
