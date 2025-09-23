@@ -3,8 +3,9 @@ FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-COPY target/*.jar app.jar
+COPY target/*.jar /run/*.jar
 
 EXPOSE 8083
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "*.jar"] --spring.config.location=/run/src/main/resources/application.properties
+
