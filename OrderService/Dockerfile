@@ -3,9 +3,9 @@ FROM openjdk:17-jdk-slim
 
 WORKDIR /app
 
-COPY target/*.jar /run/*.jar
+COPY target/OrderService-0.0.1-SNAPSHOT.jar /run/OrderService-0.0.1-SNAPSHOT.jar
 
 EXPOSE 8083
 
-ENTRYPOINT ["java", "-jar", "*.jar"] --spring.config.location=/run/src/main/resources/application.properties
+ENTRYPOINT java -jar /run/OrderService-0.0.1-SNAPSHOT.jar.jar --spring.config.location=/run/src/main/resources/application.properties
 
