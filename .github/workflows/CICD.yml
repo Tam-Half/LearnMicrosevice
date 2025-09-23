@@ -59,3 +59,25 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: | 
           docker push ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
+  deploy-k8s:
+      runs-on: ubuntu-latest
+      
+      steps:
+       - name: Checkout code
+         uses: actions/ckeckout@v4
+         
+       - name: Configure Kubernetes
+         run: |
+           mkdir -p ~/.kube
+           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+           chmod 600 ~/.kube/config
+
+           kubectl cluster-info
+           kubectl get nodes
+
+           echo "✅ Connected to K8s cluster"
+
+        
+        
+
+          
