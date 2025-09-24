@@ -4,7 +4,7 @@ metadata:
   name: ${NAME_DEPLOYMENT}
   labels:
     app: ${APP_LABEL}
-  namespace: ${NAMESPACE_PROJECT}
+  namespace: staging
 spec:
   replicas: 1
   selector:
