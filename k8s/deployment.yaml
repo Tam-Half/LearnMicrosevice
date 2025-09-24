@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ${NAMESERVICE_CONTAINER}
-          image: ${USER_DOCKER_HUB}/${REPOSITORY}:${IMAGE_TAG}
+          image: ${USER_DOCKER_HUB}/${REPOSITORY}:latest
           ports:
             - containerPort: ${PORT_CONTAINER}
           volumeMounts:
