@@ -13,6 +13,8 @@ env:
 jobs:
   build-docker:
     runs-on: ubuntu-latest
+    outputs:                   
+      version: ${{ steps.set-version.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,7 +44,7 @@ jobs:
         run: |
           echo "Maven build failed. Please check the logs above for details."
           exit 1  # Dừng pipeline nếu Maven lỗi
-
+      
       - name: Set Version 
         run: |
           echo "VERSION=${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
@@ -57,11 +59,13 @@ jobs:
         if: ${{ steps.maven-build.outcome == 'success' }}
         run: |
           cd OrderService
-          docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
+          docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }} .
+
 
       - name: Push Docker image to Docker Hub
         run: | 
-          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
+          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }} 
+
   Config-k8s:
       runs-on: Linux-Rancher
       needs: [build-docker]
