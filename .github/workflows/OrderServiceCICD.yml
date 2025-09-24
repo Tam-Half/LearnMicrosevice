@@ -75,7 +75,7 @@ jobs:
           uses: actions/checkout@v4 
         - name: Deploy-image-k8s
           run: |
-           envsubst < k8s/deployment.yaml | grep image: 
+           envsubst < k8s/deployment.yaml | grep image: | kubectl apply -f k8s/deployment.yaml
           
           env: 
            IMAGE_TAG: ${{ needs.build-docker.outputs.version }}
