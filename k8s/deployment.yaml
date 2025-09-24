@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${NAME_DEPLOYMENT}
+  labels:
+    app: ${APP_LABEL}
+  namespace: ${NAMESPACE_PROJECT}
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels:
+      app: ${APP_LABEL}
+  template:
+    metadata:
+      labels:
+        app: ${APP_LABEL}
+    spec:
+      containers:
+      - name: ${NAMESERVICE_CONTAINER}
+        image: ${USER_DOCKER_HUB}/${REPOSITORY}:${IMAGE_TAG}
+        ports:
+        - containerPort: ${PORT_CONTAINER}
