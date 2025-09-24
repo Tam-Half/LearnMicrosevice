@@ -5,7 +5,6 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
 env: 
     NAME_DEPLOYMENT: orderservice-deployment
     APP_LABEL: orderservice-be
@@ -14,8 +13,9 @@ env:
     NAMESERVICE_CONTAINER: orderservice-container
     USER_DOCKER_HUB: ${{ secrets.DOCKER_USERNAME }}
     REPOSITORY: orderservice
-    IMAGE_TAG: ${{ env.VERSION }}
+    JAVA_VERSION: '17' 
     PORT_CONTAINER: 100
+    SERVICE_NAME: orderservice
 
 jobs:
   build-docker:
@@ -81,7 +81,8 @@ jobs:
         - name: Deploy-image-k8s
           run: |
            envsubst < k8s/deployment.yaml | kubectl apply -f -
-  
+          env: 
+           IMAGE_TAG: ${{ env.VERSION }}
          
         
         
