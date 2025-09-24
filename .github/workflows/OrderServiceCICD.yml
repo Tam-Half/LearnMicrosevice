@@ -8,6 +8,8 @@ on:
 env: 
     USER_DOCKER_HUB: ${{ secrets.REGISTRY }}
     JAVA_VERSION: '17' 
+    SERVICE_NAME: orderservice
+
 jobs:
   build-docker:
     runs-on: ubuntu-latest
