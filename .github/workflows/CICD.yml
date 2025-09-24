@@ -61,7 +61,7 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
   deploy-k8s:
       runs-on: Linux-Rancher
-    
+      needs: [build-docker]
       steps:
          
        - name: Configure Kubernetes
