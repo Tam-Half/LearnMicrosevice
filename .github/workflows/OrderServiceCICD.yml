@@ -3,8 +3,12 @@ name: Basic CI
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:          
+    inputs:
+      version:
+        description: 'Image tag to deploy (nếu deploy thủ công)'
+        required: false
+        default: ''
 env: 
     USER_DOCKER_HUB: ${{ secrets.REGISTRY }}
     JAVA_VERSION: '17' 
