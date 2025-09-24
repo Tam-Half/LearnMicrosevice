@@ -25,6 +25,6 @@ spec:
               name: application-properties-config-volume
               subPath: application.properties
       volumes:
-        - configMap:
+        - name: application-properties-config-volume
+          configMap:
             name: orderservice-backend-application-properties-configmap
-          name: application-properties-config-volume
