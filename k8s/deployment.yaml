@@ -20,7 +20,7 @@ spec:
           image: ${USER_DOCKER_HUB}/${SERVICE_NAME}:${IMAGE_TAG}
           ports:
             - containerPort: ${PORT_CONTAINER}
-          volumesMounts:
+          volumeMounts:
             - mountPath: /run/src/main/resources/application.properties
               name: application-properties-config-volume
               subPath: application.properties
