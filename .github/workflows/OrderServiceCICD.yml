@@ -7,8 +7,15 @@ on:
     branches: [ main ]
 
 env: 
-  SERVICE_NAME: orderservice
-  JAVA_VERSION: '17'
+    NAME_DEPLOYMENT: orderservice-deployment
+    APP_LABEL: orderservice-be
+    NAMESPACE_PROJECT: staging
+    REPLICAS: 2
+    NAMESERVICE_CONTAINER: orderservice-container
+    USER_DOCKER_HUB: ${{ secrets.DOCKER_USERNAME }}
+    REPOSITORY: orderservice
+    IMAGE_TAG: ${{ env.VERSION }}
+    PORT_CONTAINER: 100
 
 jobs:
   build-docker:
@@ -55,11 +62,10 @@ jobs:
       - name: Push Docker image to Docker Hub
         run: | 
           docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
-  deploy-k8s:
+  Config-k8s:
       runs-on: Linux-Rancher
       needs: [build-docker]
       steps:
-         
        - name: Configure Kubernetes
          run: |
            mkdir -p ~/.kube
@@ -68,9 +74,15 @@ jobs:
 
            kubectl cluster-info
            kubectl get nodes
-
-           echo "✅ Connected to K8s cluster"
-
+  Deploy-k8s:
+      runs-on: Linux-Rancher
+      needs: [Config-k8s]
+      steps:
+        - name: Deploy-image-k8s
+          run: |
+           envsubst < k8s/deployment.yaml | kubectl apply -f -
+  
+         
         
         
 
