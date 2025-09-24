@@ -12,7 +12,6 @@ env:
     REPLICAS: 2
     NAMESERVICE_CONTAINER: orderservice-container
     USER_DOCKER_HUB: ${{ secrets.REGISTRY }}
-    REPOSITORY: orderservice
     JAVA_VERSION: '17' 
     PORT_CONTAINER: 100
     SERVICE_NAME: orderservice
