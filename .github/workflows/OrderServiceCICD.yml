@@ -8,11 +8,7 @@ on:
 
 env: 
   SERVICE_NAME: orderservice
-  
-  DOCKER_REGISTRY: registry
-  DOCKER_IMAGE: docker-image
   JAVA_VERSION: '17'
-  REGISTRY: tamtran0210
 
 jobs:
   build-docker:
@@ -54,11 +50,11 @@ jobs:
         if: ${{ steps.maven-build.outcome == 'success' }}
         run: |
           cd OrderService
-          docker build -t ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
+          docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
 
       - name: Push Docker image to Docker Hub
         run: | 
-          docker push ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
+          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
   deploy-k8s:
       runs-on: Linux-Rancher
       needs: [build-docker]
