@@ -46,6 +46,7 @@ jobs:
           exit 1  # Dừng pipeline nếu Maven lỗi
       
       - name: Set Version 
+        id: set-version
         run: |
           echo "VERSION=${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
 
