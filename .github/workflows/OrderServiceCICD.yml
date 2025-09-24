@@ -78,6 +78,8 @@ jobs:
       runs-on: Linux-Rancher
       needs: [Config-k8s]
       steps:
+        - name: Checkout Code
+          uses: actions/checkout@v4 
         - name: Deploy-image-k8s
           run: |
            envsubst < k8s/deployment.yaml | kubectl apply -f -
