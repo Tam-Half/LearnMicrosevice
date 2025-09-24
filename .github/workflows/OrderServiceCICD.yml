@@ -5,14 +5,17 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
 env: 
-  SERVICE_NAME: orderservice
-  
-  DOCKER_REGISTRY: registry
-  DOCKER_IMAGE: docker-image
-  JAVA_VERSION: '17'
-  REGISTRY: tamtran0210
+    NAME_DEPLOYMENT: orderservice-deployment
+    APP_LABEL: orderservice-be
+    NAMESPACE_PROJECT: staging
+    REPLICAS: 2
+    NAMESERVICE_CONTAINER: orderservice-container
+    USER_DOCKER_HUB: ${{ secrets.DOCKER_USERNAME }}
+    REPOSITORY: orderservice
+    JAVA_VERSION: '17' 
+    PORT_CONTAINER: 100
+    SERVICE_NAME: orderservice
 
 jobs:
   build-docker:
@@ -54,8 +57,36 @@ jobs:
         if: ${{ steps.maven-build.outcome == 'success' }}
         run: |
           cd OrderService
-          docker build -t ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
+          docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }} .
 
       - name: Push Docker image to Docker Hub
         run: | 
-          docker push ${{ env.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
+          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ env.VERSION }}
+  Config-k8s:
+      runs-on: Linux-Rancher
+      needs: [build-docker]
+      steps:
+       - name: Configure Kubernetes
+         run: |
+           mkdir -p ~/.kube
+           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+           chmod 600 ~/.kube/config
+
+           kubectl cluster-info
+           kubectl get nodes
+  Deploy-k8s:
+      runs-on: Linux-Rancher
+      needs: [Config-k8s]
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v4 
+        - name: Deploy-image-k8s
+          run: |
+           envsubst < k8s/deployment.yaml | kubectl apply -f -
+          env: 
+           IMAGE_TAG: ${{ env.VERSION }}
+         
+        
+        
+
+          
