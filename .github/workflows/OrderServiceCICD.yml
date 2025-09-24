@@ -11,7 +11,7 @@ env:
     NAMESPACE_PROJECT: staging
     REPLICAS: 2
     NAMESERVICE_CONTAINER: orderservice-container
-    USER_DOCKER_HUB: ${{ secrets.DOCKER_USERNAME }}
+    USER_DOCKER_HUB: ${{ secrets.REGISTRY }}
     REPOSITORY: orderservice
     JAVA_VERSION: '17' 
     PORT_CONTAINER: 100
