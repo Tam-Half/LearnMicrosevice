@@ -6,14 +6,8 @@ on:
   pull_request:
     branches: [ main ]
 env: 
-    NAME_DEPLOYMENT: orderservice-deployment
-    APP_LABEL: orderservice-be
-    NAMESPACE_PROJECT: staging
-    REPLICAS: 2
-    NAMESERVICE_CONTAINER: orderservice-container
     USER_DOCKER_HUB: ${{ secrets.REGISTRY }}
     JAVA_VERSION: '17' 
-    PORT_CONTAINER: 100
     SERVICE_NAME: orderservice
 
 jobs:
@@ -84,7 +78,14 @@ jobs:
            envsubst < k8s/deployment.yaml | kubectl apply -f -
           env: 
            IMAGE_TAG: ${{ env.VERSION }}
-         
+           NAME_DEPLOYMENT: orderservice-deployment
+           APP_LABEL: orderservice-be
+           NAMESPACE_PROJECT: staging
+           REPLICAS: 2
+           NAMESERVICE_CONTAINER: orderservice-container
+           USER_DOCKER_HUB: ${{ secrets.REGISTRY }} 
+           PORT_CONTAINER: 100
+           SERVICE_NAME: orderservice
         
         
 
