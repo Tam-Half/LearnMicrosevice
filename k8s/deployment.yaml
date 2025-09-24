@@ -16,7 +16,7 @@ spec:
         app: ${APP_LABEL}
     spec:
       containers:
-      - name: ${NAMESERVICE_CONTAINER}
-        image: ${USER_DOCKER_HUB}/${SERVICE_NAME}:${IMAGE_TAG}
-        ports:
-        - containerPort: ${PORT_CONTAINER}
+        - name: ${NAMESERVICE_CONTAINER}
+          image: ${USER_DOCKER_HUB}/${SERVICE_NAME}:${IMAGE_TAG}
+          ports:
+            - containerPort: ${PORT_CONTAINER}
