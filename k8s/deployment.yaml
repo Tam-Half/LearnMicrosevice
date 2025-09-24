@@ -6,7 +6,7 @@ metadata:
     app: ${APP_LABEL}
   namespace: ${NAMESPACE_PROJECT}
 spec:
-  replicas: ${REPLICAS}
+  replicas: 1
   selector:
     matchLabels:
       app: ${APP_LABEL}
