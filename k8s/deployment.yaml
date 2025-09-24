@@ -20,3 +20,11 @@ spec:
           image: ${USER_DOCKER_HUB}/${SERVICE_NAME}:${IMAGE_TAG}
           ports:
             - containerPort: ${PORT_CONTAINER}
+          volumesMounts:
+            - mountPath: /run/src/main/resources/application.properties
+              name: application-properties-config-volume
+              subPath: application.properties
+      volumes:
+        - configMap:
+            name: orderservice-backend-application-properties-configmap
+          name: application-properties-config-volume
