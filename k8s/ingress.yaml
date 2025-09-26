@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: orderservice-be-ingress
-  namespace: backend
+  namespace: ${NAMESPACE_PROJECT}
 spec:
   ingressClassName: nginx 
   rules:
