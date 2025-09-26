@@ -87,11 +87,15 @@ jobs:
       runs-on: Linux-Rancher
       needs:  [build-docker, Config-k8s]
       steps:
-        - name: Checkout Code
+        - name: Checkout Code k8s/deployments
           uses: actions/checkout@v4 
+          with:
+            sparse-checkout: |
+              k8s/deployment.yaml
+            sparse-checkout-cone-mode: false
         - name: Deploy-image-k8s
           run: |
-            envsubst < k8s/deployment.yaml > k8s/deployment_rendered.yaml
+            envsubst <deployment.yaml > deployment_rendered.yaml
 
             echo "Manifest sau khi thay biến:"
             head -n 30 k8s/deployment_rendered.yaml
@@ -107,7 +111,29 @@ jobs:
            USER_DOCKER_HUB: ${{ secrets.REGISTRY }} 
            PORT_CONTAINER: 100
            REPOSITORY: orderservice
-        
-        
+  Service-k8s: 
+    runs-on: Linux-Rancher
+    needs: [Deploy-k8s]
+    steps: 
+      - name: Checkout Code k8s/service 
+        uses: actions/checkout@v4
+        with:
+            sparse-checkout: |
+              k8s/service.yaml
+            sparse-checkout-cone-mode: false
+      - name: Apply Service for Deployment
+        run: | 
+            envsubst <deployment.yaml > deployment_rendered.yaml
+        env: 
+           IMAGE_TAG: ${{ needs.build-docker.outputs.version }} 
+           NAMESPACE_PROJECT: staging
+           SERVICE's_PORT: 8083
+           DEPLOYMENT's_APPSELECTOR: orderservice-be
 
-          
+
+
+
+
+
+
+        
