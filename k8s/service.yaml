@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: orderservice-be-service
-  namespace: backend
+  namespace: ${NAMESPACE_PROJECT}
 spec:
   internalTrafficPolicy: Cluster
   ipFamilies:
@@ -12,8 +12,8 @@ spec:
     - name: tcp
       port: 80
       protocol: TCP
-      targetPort: 8083
+      targetPort: ${SERVICE's_PORT}
   selector:
-    app: orderservice-be
+    app: ${DEPLOYMENT's_APPSELECTOR}
   sessionAffinity: None
   type: ClusterIP
