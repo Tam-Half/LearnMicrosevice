@@ -86,6 +86,8 @@ jobs:
   Deploy-k8s:
     runs-on: Linux-Rancher
     needs: [build-docker, Config-k8s]
+    environment: 
+      name: deploy
     steps:
       - name: Checkout Code k8s/deployments
         uses: actions/checkout@v4
