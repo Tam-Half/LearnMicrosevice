@@ -123,7 +123,7 @@ jobs:
             sparse-checkout-cone-mode: false
       - name: Apply Service for Deployment
         run: | 
-            envsubst <deployment.yaml > deployment_rendered.yaml
+            envsubst <k8s/deployment.yaml > k8s/deployment_rendered.yaml
         env: 
            IMAGE_TAG: ${{ needs.build-docker.outputs.version }} 
            NAMESPACE_PROJECT: staging
