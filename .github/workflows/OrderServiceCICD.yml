@@ -128,8 +128,8 @@ jobs:
         env: 
            IMAGE_TAG: ${{ needs.build-docker.outputs.version }} 
            NAMESPACE_PROJECT: staging
-           SERVICE's_PORT: 8083
-           DEPLOYMENT's_APPSELECTOR: orderservice-be
+           SERVICEs_PORT: 8083
+           DEPLOYMENTs_APPSELECTOR: orderservice-be
 
 
 
