@@ -95,7 +95,7 @@ jobs:
             sparse-checkout-cone-mode: false
         - name: Deploy-image-k8s
           run: |
-            envsubst <deployment.yaml > deployment_rendered.yaml
+            envsubst <k8s/deployment.yaml > k8s/deployment_rendered.yaml
 
             echo "Manifest sau khi thay biến:"
             head -n 30 k8s/deployment_rendered.yaml
