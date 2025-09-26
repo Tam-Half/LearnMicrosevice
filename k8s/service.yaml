@@ -12,8 +12,8 @@ spec:
     - name: tcp
       port: 80
       protocol: TCP
-      targetPort: ${SERVICE's_PORT}
+      targetPort: ${SERVICEs_PORT}
   selector:
-    app: ${DEPLOYMENT's_APPSELECTOR}
+    app: ${DEPLOYMENTs_APPSELECTOR}
   sessionAffinity: None
   type: ClusterIP

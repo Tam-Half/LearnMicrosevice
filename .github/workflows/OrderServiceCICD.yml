@@ -95,7 +95,7 @@ jobs:
             sparse-checkout-cone-mode: false
         - name: Deploy-image-k8s
           run: |
-            envsubst <deployment.yaml > deployment_rendered.yaml
+            envsubst <k8s/deployment.yaml > k8s/deployment_rendered.yaml
 
             echo "Manifest sau khi thay biến:"
             head -n 30 k8s/deployment_rendered.yaml
@@ -123,12 +123,13 @@ jobs:
             sparse-checkout-cone-mode: false
       - name: Apply Service for Deployment
         run: | 
-            envsubst <deployment.yaml > deployment_rendered.yaml
+            envsubst <k8s/service.yaml > k8s/service_rendered.yaml
+            kubectl apply -f k8s/service_rendered.yaml
         env: 
            IMAGE_TAG: ${{ needs.build-docker.outputs.version }} 
            NAMESPACE_PROJECT: staging
-           SERVICE's_PORT: 8083
-           DEPLOYMENT's_APPSELECTOR: orderservice-be
+           SERVICEs_PORT: 8083
+           DEPLOYMENTs_APPSELECTOR: orderservice-be
 
 
 
