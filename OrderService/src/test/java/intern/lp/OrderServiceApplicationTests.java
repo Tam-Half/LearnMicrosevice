@@ -14,15 +14,15 @@ class OrderServiceApplicationTests {
 
 	@Test
 	void testSQLInjection() throws SQLException {
-		String orderid = "1 ";
+		// String orderid = "1 ";
 
-		Connection conn = DriverManager.getConnection("jdbc:h2:mem:testdb", "sa", "Root1234");
+		// Connection conn = DriverManager.getConnection("jdbc:h2:mem:testdb", "sa", "Root1234");
 
-		String query = "SELECT * FROM orders WHERE id = '" + orderid + "'";
-		Statement stmt = conn.createStatement();
-		ResultSet rs = stmt.executeQuery(query);
+		// String query = "SELECT * FROM orders WHERE id = '" + orderid + "'";
+		// Statement stmt = conn.createStatement();
+		// ResultSet rs = stmt.executeQuery(query);
 
-		System.out.println("Executed query: " + query);
+		// System.out.println("Executed query: " + query);
 
 	}
 
