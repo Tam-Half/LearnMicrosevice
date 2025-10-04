@@ -109,8 +109,8 @@ jobs:
           SERVER_STORAGE: ${{ secrets.SERVER_STORAGE }}
           PORT_CONTAINER_DEPLOYMENT: ${{ secrets.PORT_CONTAINER_DEPLOYMENT }}
         run: |
-          envsubst < ./helm-charts/Microservice_k8s/values/values-order.yaml \
-          > ./helm-charts/Microservice_k8s/values/order-values.generated.yaml
+          envsubst < ./helm-charts/values/values-order.yaml \
+          > ./helm-charts/values/order-values.generated.yaml
           
           helm upgrade --install order-service \
           ./helm-charts/Microservice_k8s \
