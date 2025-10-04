@@ -112,9 +112,9 @@ jobs:
           envsubst < ./helm-charts/values/values-order.yaml \
           > ./helm-charts/values/order-values.generated.yaml
           
-          helm upgrade --install orderservice \
-          ./helm-charts \
-          -f ./helm-charts/values/order-values.generated.yaml      
+          helm upgrade --install orderservice ./helm-charts \
+          -f ./helm-charts/values/order-values.generated.yaml \
           --namespace testing \
           --create-namespace
+
  
