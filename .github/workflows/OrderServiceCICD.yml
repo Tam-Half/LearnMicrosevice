@@ -86,68 +86,17 @@ jobs:
   Deploy-k8s:
     runs-on: Linux-Rancher
     needs: [build-docker, Config-k8s]
-    environment: 
-      name: deploy
     steps:
-      - name: Checkout Code k8s/deployments
+      - name: Checkout Helm Charts
         uses: actions/checkout@v4
         with:
-          sparse-checkout: |
-            k8s/deployment.yaml
-          sparse-checkout-cone-mode: false
-      - name: Deploy-image-k8s
+          repository: Tam-Half/Microservice_k8s
+          path: helm-charts
+          fetch-depth: 1
+    
+      - name: Deploy
         run: |
-          envsubst <k8s/deployment.yaml > k8s/deployment_rendered.yaml
-
-          echo "Manifest sau khi thay biến:"
-          head -n 30 k8s/deployment_rendered.yaml
-
-          kubectl apply -f k8s/deployment_rendered.yaml
-        env:
-          IMAGE_TAG: ${{ needs.build-docker.outputs.version }}
-          NAME_DEPLOYMENT: orderservice-deployment
-          APP_LABEL: orderservice-be
-          NAMESPACE_PROJECT: staging
-          REPLICAS: 2
-          NAMESERVICE_CONTAINER: orderservice-container
-          USER_DOCKER_HUB: ${{ secrets.REGISTRY }}
-          PORT_CONTAINER: 100
-          REPOSITORY: orderservice
+          helm upgrade --install order-service \
+            ./helm-charts/order-service        
           
-  Service-k8s:
-    runs-on: Linux-Rancher
-    needs: [Deploy-k8s]
-    steps:
-      - name: Checkout Code k8s/service
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            k8s/service.yaml
-          sparse-checkout-cone-mode: false
-      - name: Apply Service for Deployment
-        run: |
-          envsubst <k8s/service.yaml > k8s/service_rendered.yaml
-          kubectl apply -f k8s/service_rendered.yaml
-        env:
-          IMAGE_TAG: ${{ needs.build-docker.outputs.version }}
-          NAMESPACE_PROJECT: staging
-          SERVICEs_PORT: 8083
-          DEPLOYMENTs_APPSELECTOR: orderservice-be
-          
-  Ingress-k8s:
-      runs-on: Linux-Rancher
-      needs: [Service-k8s]
-      steps:
-        - name: Checkout Code k8s/service
-          uses: actions/checkout@v4
-          with:
-            sparse-checkout: |
-              k8s/ingress.yaml
-            sparse-checkout-cone-mode: false
-
-        - name: Apply Service for Deployment
-          run: |
-            envsubst <k8s/ingress.yaml > k8s/ingress_render.yaml
-            kubectl apply -f k8s/ingress_render.yaml
-          env:
-            NAMESPACE_PROJECT: staging
+ 
