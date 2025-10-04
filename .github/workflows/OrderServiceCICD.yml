@@ -113,7 +113,7 @@ jobs:
           > ./helm-charts/values/order-values.generated.yaml
           
           helm upgrade --install order-service \
-          ./helm-charts/Microservice_k8s \
-          -f ./helm-charts/Microservice_k8s/values/order-values.generated.yaml      
+          ./helm-charts \
+          -f ./helm-charts/values/order-values.generated.yaml      
           
  
