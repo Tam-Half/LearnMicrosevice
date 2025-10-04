@@ -95,8 +95,25 @@ jobs:
           fetch-depth: 1
     
       - name: Deploy
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          PORT_SERVICE: ${{ secrets.PORT_SERVICE }}
+          PORT_TARGET: ${{ secrets.PORT_TARGET }}
+          DOCKER_NAMESERVICE: ${{ secrets.DOCKER_NAMESERVICE }}
+          REGISTRY: ${{ secrets.REGISTRY }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          SERVER_STORAGE: ${{ secrets.SERVER_STORAGE }}
+          PORT_CONTAINER_DEPLOYMENT: ${{ secrets.PORT_CONTAINER_DEPLOYMENT }}
         run: |
+          envsubst < ./helm-charts/Microservice_k8s/values/order-values.yaml \
+          > ./helm-charts/Microservice_k8s/values/order-values.generated.yaml
+          
           helm upgrade --install order-service \
-            ./helm-charts/order-service        
+          ./helm-charts/Microservice_k8s \
+          -f ./helm-charts/Microservice_k8s/values/order-values.generated.yaml      
           
  
