@@ -29,18 +29,10 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: "temurin"
 
-      - name: Run Semgrep - SAST
-        uses: returntocorp/semgrep-action@v1
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
         with:
-          config: |
-            p/security-audit
-            |
-            rules:
-              - id: find-all-execute-query
-                pattern: executeQuery(...)
-                message: Found executeQuery - check for SQL injection
-                languages: [java]
-                severity: WARNING
+          languages: java
 
       - name: Build maven
         id: maven-build
@@ -48,6 +40,11 @@ jobs:
           cd OrderService
           mvn clean install -B -DskipTests > my_Log_Build.txt 2>&1
           tail -n 10 my_Log_Build.txt
+          
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:java"   
 
       - name: Check Maven Build Status
         if: ${{ steps.maven-build.outcome != 'success' }} # Kiểm tra nếu Maven thất bại
