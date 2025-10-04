@@ -115,5 +115,6 @@ jobs:
           helm upgrade --install order-service \
           ./helm-charts \
           -f ./helm-charts/values/order-values.generated.yaml      
-          
+          --namespace testing \
+          --create-namespace
  
