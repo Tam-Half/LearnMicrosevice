@@ -33,8 +33,6 @@ jobs:
         uses: returntocorp/semgrep-action@v1
         with:
           config: p/security-audit
-          generateSarif: true
-          sarif_file: semgrep.sarif
 
       - name: Build maven
         id: maven-build
