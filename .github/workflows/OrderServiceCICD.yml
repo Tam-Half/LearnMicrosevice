@@ -29,10 +29,31 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: "temurin"
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
         with:
-          languages: java
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build & Analyze with SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # để Sonar comment vào PR
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          cd OrderService
+          mvn -B clean verify sonar:sonar \
+            -Dsonar.projectKey=Tam-Half_LearnMicrosevice \
+            -Dsonar.organization=tam-half \
+            -Dsonar.host.url=https://sonarcloud.io
+  
 
       - name: Build maven
         id: maven-build
@@ -41,10 +62,7 @@ jobs:
           mvn clean install -B -DskipTests > my_Log_Build.txt 2>&1
           tail -n 10 my_Log_Build.txt
           
-      # - name: Perform CodeQL Analysis
-      #   uses: github/codeql-action/analyze@v3
-      #   with:
-      #     category: "/language:java"   
+    
 
       - name: Check Maven Build Status
         if: ${{ steps.maven-build.outcome != 'success' }} # Kiểm tra nếu Maven thất bại
