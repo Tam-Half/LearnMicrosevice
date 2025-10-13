@@ -73,7 +73,7 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}: 62
+          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:62
 #          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }}
           
   Config-k8s:
