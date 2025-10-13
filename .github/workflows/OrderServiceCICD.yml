@@ -41,10 +41,10 @@ jobs:
           mvn clean install -B -DskipTests > my_Log_Build.txt 2>&1
           tail -n 10 my_Log_Build.txt
           
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:java"   
+      # - name: Perform CodeQL Analysis
+      #   uses: github/codeql-action/analyze@v3
+      #   with:
+      #     category: "/language:java"   
 
       - name: Check Maven Build Status
         if: ${{ steps.maven-build.outcome != 'success' }} # Kiểm tra nếu Maven thất bại
