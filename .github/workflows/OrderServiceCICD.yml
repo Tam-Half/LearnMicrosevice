@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Image tag to deploy (nếu deploy thủ công)"
+        description: "Image tag to deploy "
         required: false
         default: ""
 env:
@@ -67,12 +67,15 @@ jobs:
         if: ${{ steps.maven-build.outcome == 'success' }}
         run: |
           cd OrderService
-          docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }} .
+          docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:62 .
+ #         docker build -t ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }} .
+           
 
       - name: Push Docker image to Docker Hub
         run: |
-          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }}
-
+          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}: 62
+#          docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }}
+          
   Config-k8s:
     runs-on: Linux-Rancher
     needs: [build-docker]
