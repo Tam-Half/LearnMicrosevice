@@ -29,10 +29,13 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: "temurin"
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
         with:
-          languages: java
+          organization: "tam-half"          
+          projectKey: "Tam-Half_LearnMicrosevice"            
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  
 
       - name: Build maven
         id: maven-build
