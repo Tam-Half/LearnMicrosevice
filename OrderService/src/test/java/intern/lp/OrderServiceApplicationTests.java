@@ -17,7 +17,7 @@ class OrderServiceApplicationTests {
 	void testSQLInjection_Vulnerable() throws SQLException {
 		String userInput = "1'; DROP TABLE users; --";
 
-		Connection conn = DriverManager.getConnection("jdbc:h2:mem:test", "sa", "");
+		Connection conn = DriverManager.getConnection("jdbc:h2:mem:test", "sa", "Root1234");
 
 		// 🔴 SQL INJECTION - String concatenation
 		String query = "SELECT * FROM users WHERE id = '" + userInput + "'";
