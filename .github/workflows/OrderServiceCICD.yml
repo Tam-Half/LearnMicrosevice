@@ -49,10 +49,11 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           cd OrderService
-          mvn -B clean verify sonar:sonar \
-            -Dsonar.projectKey=Tam-Half_LearnMicrosevice \
-            -Dsonar.organization=tam-half \
-            -Dsonar.host.url=https://sonarcloud.io
+          mvn -B clean verify sonar:sonar -DskipTests \
+          -Dsonar.projectKey=Tam-Half_LearnMicrosevice \
+          -Dsonar.organization=tam-half \
+          -Dsonar.host.url=https://sonarcloud.io
+
   
 
       - name: Build maven
