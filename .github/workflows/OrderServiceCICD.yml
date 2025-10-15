@@ -94,7 +94,7 @@ jobs:
           docker push ${{ secrets.REGISTRY }}/${{ env.SERVICE_NAME }}:${{ steps.set-version.outputs.version }}
           
   Config-k8s:
-    runs-on: Linux-Rancher
+    runs-on: rancher-server
     needs: [build-docker]
     steps:
       - name: Configure Kubernetes
@@ -107,7 +107,7 @@ jobs:
           kubectl get nodes
           
   Deploy-k8s:
-    runs-on: Linux-Rancher
+    runs-on: rancher-server
     needs: [build-docker, Config-k8s]
     steps:
       - name: Checkout Helm Charts
