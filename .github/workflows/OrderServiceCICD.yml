@@ -108,7 +108,7 @@ jobs:
           
   Deploy-k8s:
     runs-on: self-hosted
-    # needs: [build-docker, Config-k8s]
+    needs: [Config-k8s]
     steps:
       - name: Checkout Helm Charts
         uses: actions/checkout@v4
