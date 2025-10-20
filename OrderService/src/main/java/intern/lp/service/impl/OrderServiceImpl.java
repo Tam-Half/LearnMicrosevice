@@ -49,8 +49,11 @@ public class OrderServiceImpl {
                 })
                 .collect(Collectors.toList());
 
+        log.info("orderRequest.getCustomerId() " + orderRequest.getCustomerId());
         // ✅ 2. Gọi customer-service lấy thông tin khách hàng
         CustomerResponse customerResponse = customerClient.getCustomerById(orderRequest.getCustomerId());
+
+       log.info("CUSTOMER " + customerResponse);
 
         // ✅ 3. Lưu đơn hàng trước (PENDING) -> tạo orderId để gửi qua Inventory
         Order order = new Order();
@@ -112,7 +115,7 @@ public class OrderServiceImpl {
 
         return OrderResponse.builder()
                 .orderId(savedOrder.getId())
-                .customerName(customerResponse.getCustomer().getFullName())
+                .customerName(customerResponse.getFullName())
                 .orderDate(savedOrder.getOrderDate())
                 .status(savedOrder.getStatus())
                 .items(itemResponses)
