@@ -1,188 +1,122 @@
 package intern.lp.service.impl;
 
-import intern.lp.dto.CustomerResponse;
-import intern.lp.dto.OrderItemRequest;
-import intern.lp.dto.OrderRequest;
-import intern.lp.dto.ProductResponse;
+import intern.lp.dto.request.InventoryRequest;
+import intern.lp.dto.response.*;
+import intern.lp.dto.request.OrderRequest;
 import intern.lp.entites.Order;
 import intern.lp.entites.OrderItem;
 import intern.lp.enums.OrderStatus;
 import intern.lp.repository.OrderRepository;
-import intern.lp.service.OrderService;
+import intern.lp.service.CustomerService;
+import intern.lp.service.ProductService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
-public class OrderServiceImpl implements OrderService {
+public class OrderServiceImpl {
 
     @Autowired
-    private RabbitTemplate rabbitTemplate;
+    private ProductService productClient;
+
+    @Autowired
+    private CustomerService customerClient;
 
     @Autowired
     private OrderRepository orderRepository;
 
-    @Override
-    public List<Order> getAllOrder() {
-        return List.of();
-    }
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
-    @Override
-    public String createOrder(OrderRequest orderRequest) {
-        CustomerResponse customerResponse = getCustomerInfo(orderRequest.getCustomerId());
+    private static final String INVENTORY_EXCHANGE = "inventory-exchange";
+    private static final String INVENTORY_ROUTING_KEY = "inventory.check";
 
-        if (!"SUCCESS".equals(customerResponse.getStatus())) {
-            throw new RuntimeException("Customer not found: " + orderRequest.getCustomerId());
-        }
+    public OrderResponse createOrder(OrderRequest orderRequest) {
 
-        List<ProductResponse.Product> products = new ArrayList<>();
+        // ✅ 1. Gọi product-service để lấy thông tin sản phẩm
+        List<ProductResponse> productInfos = orderRequest.getOrderItems().stream()
+                .map(item -> {
+                    ProductResponse product = productClient.getProductById(item.getProductId());
+                    log.info("Call product-service success, product: {}", product);
+                    return product;
+                })
+                .collect(Collectors.toList());
 
-        for(OrderItem item : orderRequest.getOrderItems()){
-            ProductResponse productResponse = getProductInfo(item.getProductId());
-            log.info("Product found and status: {}",productResponse);
-            if (!"SUCCESS".equals(productResponse.getStatus())) {
-                throw new RuntimeException("Product not found: " + item.getProductId());
-            }
-            ProductResponse.Product product = productResponse.getProduct();
-            products.add(product);
-        }
+        // ✅ 2. Gọi customer-service lấy thông tin khách hàng
+        CustomerResponse customerResponse = customerClient.getCustomerById(orderRequest.getCustomerId());
 
+        // ✅ 3. Lưu đơn hàng trước (PENDING) -> tạo orderId để gửi qua Inventory
         Order order = new Order();
-
         order.setCustomerId(orderRequest.getCustomerId());
         order.setOrderDate(LocalDateTime.now());
-        order.setStatus( OrderStatus .PENDING);
-        List<OrderItem> orderitems = new ArrayList<>();
-        for(int i =0 ; i < orderRequest.getOrderItems().size(); i++){
-            OrderItem itemRequest = orderRequest.getOrderItems().get(i);
-            ProductResponse.Product product = products.get(i);
-
-            OrderItem orderItem = new OrderItem();
-            orderItem.setProductId(product.getId());
-            orderItem.setQuantity(itemRequest.getQuantity());
-
-            orderitems.add(orderItem);
-        }
-        order.setOrderItems(orderitems);
-
+        order.setStatus(OrderStatus.PENDING);
+        order.setOrderItems(orderRequest.getOrderItems());
         Order savedOrder = orderRepository.save(order);
-        log.info("Order created successfully: {}", savedOrder.getId());
-//
-//        // Ở đây bạn sẽ thêm logic tạo order thật
-//        // Giả lập tạo order thành công
-//        String orderId = "ORDER_" + System.currentTimeMillis();
-//        Long customerId = customerResponse.getCustomer().getId();
-//        log.info("Customer found: {}", customerId);
-//        orderRepository.save(new Order(customerId));
-//
-//        log.info("Order created successfully: {}", orderId);
-        return savedOrder.getId().toString();
-    }
+        log.info("Order saved temporarily with ID = {} (status PENDING)", savedOrder.getId());
 
-    @Override
-    public Order getOrderById(Long id) {
-            return orderRepository.findById(id).orElse(null);
-    }
+        // ✅ 4. Gửi yêu cầu Inventory kèm orderId để kiểm tra tồn kho
+        InventoryRequest inventoryRequest = new InventoryRequest();
+        inventoryRequest.setOrderId(savedOrder.getId());
+        inventoryRequest.setItems(orderRequest.getOrderItems());
 
-    public CustomerResponse getCustomerInfo(Long customerId){
-        try{
-            Map<String, Object> request = new HashMap<>();
-            request.put("action","GET_CUSTOMER");
-            request.put("customerId", customerId);
-            request.put("correlationId", UUID.randomUUID().toString());
-            log.info("Sending request to CustomerService: {}", request);
-            // Gửi message và nhận response
-            Object response = rabbitTemplate.convertSendAndReceive(
-                    "exchange_demo", // exchange (empty for default)
-                    "customer.queue", // routing key
-                    request
-            );
-            if(response instanceof Map){
-                Map<String,Object> responseMap  = (Map<String, Object>) response;
-                CustomerResponse customerResponse = new CustomerResponse();
-                customerResponse.setStatus((String) responseMap.get("status"));
-                if (responseMap.get("customer") instanceof Map) {
-                    Map<String, Object> customerMap = (Map<String, Object>) responseMap.get("customer");
-                    CustomerResponse.Customer customer = new CustomerResponse.Customer();
-                    Long customerId1 = null;
-                    Object customerIdObj =  customerMap.get("id");
+        log.info("Sending inventory check for order {}...", savedOrder.getId());
+        InventoryResponse inventoryResponse = (InventoryResponse) rabbitTemplate.convertSendAndReceive(
+                INVENTORY_EXCHANGE,
+                INVENTORY_ROUTING_KEY,
+                inventoryRequest
+        );
 
-                    // Xử lý casting an toàn
-                    if (customerIdObj instanceof Integer) {
-                        customerId1 = ((Integer) customerIdObj).longValue();
-                    } else if (customerIdObj instanceof Long) {
-                        customerId1 = (Long) customerIdObj;
-                    } else if (customerIdObj instanceof String) {
-                        customerId1 = Long.parseLong((String) customerIdObj);
-                    }
-                    customer.setId(customerId1);
-                    customer.setName((String) customerMap.get("name"));
-                    customer.setEmail((String) customerMap.get("email"));
-                    customerResponse.setCustomer(customer);
-                }
-
-                return customerResponse;
-            }
-        }catch (Exception e) {
-            log.error("Error calling CustomerService: {}", e.getMessage());
+        if (inventoryResponse == null) {
+            throw new RuntimeException("Inventory Service Timeout!");
         }
-        CustomerResponse errorResponse = new CustomerResponse();
-        errorResponse.setStatus("ERROR");
-        return errorResponse;
-    }
 
-    public ProductResponse getProductInfo(Long productId) {
-        try{
-            Map<String, Object> request = new HashMap<>();
-            request.put("action","GET_PRODUCT");
-            request.put("productId", productId);
-            request.put("correlationId", UUID.randomUUID().toString());
-            log.info("Sending request to ProductService: {}", request);
-            Object response = rabbitTemplate.convertSendAndReceive("product.queue",request);
-            if(response instanceof Map){
-                Map<String,Object> responseMap  = (Map<String, Object>) response;
-                return  convertToProductResponse(responseMap);
-            }
-
-        }catch (Exception e) {
-            log.error("❌ Error calling ProductService: {}", e.getMessage(), e);
+        // ✅ 5. Nếu không đủ hàng => hủy đơn
+        if (!inventoryResponse.isAvailable()) {
+            savedOrder.setStatus(OrderStatus.CANCELED);
+            orderRepository.save(savedOrder);
+            throw new RuntimeException("Order canceled: Inventory not enough for products: "
+                    + inventoryResponse.getUnavailableItems());
         }
-        return createErrorProductResponse();
+
+        // ✅ 6. Nếu đủ hàng => xác nhận đơn
+        savedOrder.setStatus(OrderStatus.CONFIRMED);
+        orderRepository.save(savedOrder);
+        log.info("Order {} confirmed successfully!", savedOrder.getId());
+
+        // ✅ 7. Trả về thông tin order đầy đủ
+        List<OrderItemResponse> itemResponses = savedOrder.getOrderItems().stream().map(item -> {
+            ProductResponse product = productInfos.stream()
+                    .filter(p -> p.getId().equals(item.getProductId()))
+                    .findFirst()
+                    .orElseThrow();
+            BigDecimal total = BigDecimal.valueOf(product.getPrice() * item.getQuantity());
+            return OrderItemResponse.builder()
+                    .productId(item.getProductId())
+                    .productName(product.getName())
+                    .quantity(item.getQuantity())
+                    .price(BigDecimal.valueOf(product.getPrice()))
+                    .total(total)
+                    .build();
+        }).collect(Collectors.toList());
+
+        BigDecimal totalAmount = itemResponses.stream()
+                .map(OrderItemResponse::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return OrderResponse.builder()
+                .orderId(savedOrder.getId())
+                .customerName(customerResponse.getCustomer().getFullName())
+                .orderDate(savedOrder.getOrderDate())
+                .status(savedOrder.getStatus())
+                .items(itemResponses)
+                .totalAmount(totalAmount)
+                .build();
     }
-    private ProductResponse convertToProductResponse(Map<String, Object> responseMap) {
-        ProductResponse response = new ProductResponse();
-        response.setStatus((String) responseMap.get("status"));
-        if (responseMap.get("product") instanceof Map) {
-            Map<String, Object> productMap = (Map<String, Object>) responseMap.get("product");
-            ProductResponse.Product product= new ProductResponse.Product();
-
-            Long productId= null;
-            Object productIddObj = productMap.get("id");
-            if (productIddObj instanceof Integer) {
-                productId = Long.valueOf((Integer) productIddObj);
-            } else if (productIddObj instanceof Long) {
-                productId = (Long) productIddObj;
-            } else if (productIddObj instanceof String) {
-                productId = Long.parseLong((String) productIddObj);
-            }
-            product.setId(productId);
-
-
-            product.setName((String) productMap.get("name"));
-            product.setPrice(Double.parseDouble(String.valueOf(productMap.get("price"))));
-            response.setProduct(product);
-        }
-        return response;
-    }
-    private ProductResponse createErrorProductResponse() {
-        ProductResponse response = new ProductResponse();
-        response.setStatus("ERROR");
-        return response;
-    }
-
 }

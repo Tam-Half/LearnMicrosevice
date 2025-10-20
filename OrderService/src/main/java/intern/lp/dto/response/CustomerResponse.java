@@ -1,4 +1,4 @@
-package intern.lp.dto;
+package intern.lp.dto.response;
 
 import lombok.Data;
 
@@ -9,8 +9,7 @@ public class CustomerResponse {
 
     @Data
     public static class Customer {
-        private Long id;
-        private String name;
+        private String fullName;
         private String email;
         private String phone;
         private String address;

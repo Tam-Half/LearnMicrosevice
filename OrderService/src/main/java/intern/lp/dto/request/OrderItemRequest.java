@@ -1,4 +1,4 @@
-package intern.lp.dto;
+package intern.lp.dto.request;
 
 import lombok.Data;
 

@@ -1,6 +1,6 @@
 package intern.lp.enums;
 
 public enum OrderStatus {
-    PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+    PENDING, CONFIRMED,CANCELED, DELIVERED;
 
 }

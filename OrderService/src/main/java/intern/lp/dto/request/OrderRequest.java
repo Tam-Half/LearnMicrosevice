@@ -1,4 +1,4 @@
-package intern.lp.dto;
+package intern.lp.dto.request;
 
 import intern.lp.entites.OrderItem;
 import intern.lp.enums.OrderStatus;

@@ -2,7 +2,7 @@ package intern.lp.service;
 
 import java.util.List;
 
-import intern.lp.dto.OrderRequest;
+import intern.lp.dto.request.OrderRequest;
 import intern.lp.entites.Order;
 
 public interface OrderService {

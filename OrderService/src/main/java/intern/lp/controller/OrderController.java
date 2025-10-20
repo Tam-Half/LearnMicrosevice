@@ -1,28 +1,28 @@
 package intern.lp.controller;
 
-import intern.lp.dto.OrderRequest;
-import intern.lp.service.OrderService;
+import intern.lp.dto.request.OrderRequest;
+import intern.lp.dto.response.OrderResponse;
+import intern.lp.service.impl.OrderServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
+
     @Autowired
-    private OrderService orderService;
-    private String apiKey = "aasd8989gf89sdg8s9f8s9f89sdf98d8f9dsf";
+    private OrderServiceImpl orderService;
+
     @PostMapping
-    public ResponseEntity<String> createOrder(@RequestBody OrderRequest request){
+    public ResponseEntity<?> createOrder(@RequestBody OrderRequest request){
         try {
-            String orderId = orderService.createOrder(request);
-            return ResponseEntity.ok("Order created: " + orderId);
-        }catch (Exception e){
+                OrderResponse orderResponse = orderService.createOrder(request);
+
+            return ResponseEntity.ok(orderResponse);
+
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-
     }
 }
