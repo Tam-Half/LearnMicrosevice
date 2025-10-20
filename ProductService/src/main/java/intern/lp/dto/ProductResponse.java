@@ -2,12 +2,14 @@ package intern.lp.dto;
 
 import lombok.*;
 
+import java.io.Serializable;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ProductResponse {
+public class ProductResponse  implements Serializable {
     private Long id;
     private String name;
     private String description;
