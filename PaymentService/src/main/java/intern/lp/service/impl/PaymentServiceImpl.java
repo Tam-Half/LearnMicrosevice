@@ -10,6 +10,7 @@ import intern.lp.payment.PaymentStatus;
 import intern.lp.repository.PaymentRepository;
 import intern.lp.service.EventPublisherService;
 import intern.lp.service.PaymentService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +20,11 @@ import java.math.BigDecimal;
 @Service
 public class PaymentServiceImpl implements PaymentService {
 
-    private final PaymentRepository paymentRepository;
-    private final EventPublisherService eventPublisher;
+    @Autowired
+    private  PaymentRepository paymentRepository;
+    @Autowired
+    private  EventPublisherService eventPublisher;
 
-    public PaymentServiceImpl(PaymentRepository paymentRepository, EventPublisherService eventPublisher) {
-        this.paymentRepository = paymentRepository;
-        this.eventPublisher = eventPublisher;
-    }
 
     @Override
     @Transactional

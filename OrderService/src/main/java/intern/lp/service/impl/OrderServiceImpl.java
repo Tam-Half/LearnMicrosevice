@@ -1,8 +1,9 @@
 package intern.lp.service.impl;
 
 import intern.lp.dto.request.InventoryRequest;
-import intern.lp.dto.response.*;
 import intern.lp.dto.request.OrderRequest;
+import intern.lp.dto.request.PaymentRequest;
+import intern.lp.dto.response.*;
 import intern.lp.entites.Order;
 import intern.lp.entites.OrderItem;
 import intern.lp.enums.OrderStatus;
@@ -35,105 +36,95 @@ public class OrderServiceImpl {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    // Exchange & Routing key cho Inventory
     private static final String INVENTORY_EXCHANGE = "inventory-exchange";
     private static final String INVENTORY_ROUTING_KEY = "inventory.check";
 
+    // Exchange & Routing key cho Payment
+    private static final String PAYMENT_EXCHANGE = "payment-exchange";
+    private static final String PAYMENT_ROUTING_KEY = "payment.create";
+
     public OrderResponse createOrder(OrderRequest orderRequest) {
 
-        // ✅ 1. Gọi product-service lấy thông tin sản phẩm
+        // ----------- BƯỚC 1: Lấy product và customer -----------
         List<ProductResponse> productInfos = orderRequest.getOrderItems().stream()
-                .map(item -> {
-                    ProductResponse product = productClient.getProductById(item.getProductId());
-                    log.info("Fetched product: {}", product);
-                    return product;
-                })
+                .map(item -> productClient.getProductById(item.getProductId()))
                 .collect(Collectors.toList());
 
-        // ✅ 2. Gọi customer-service
         CustomerResponse customerResponse = customerClient.getCustomerById(orderRequest.getCustomerId());
-        if (customerResponse == null || customerResponse.getFullName() == null) {
+        if (customerResponse == null) {
             throw new RuntimeException("Customer not found with id: " + orderRequest.getCustomerId());
         }
 
-        // ✅ 3. Tính totalAmount trước
+        // ----------- BƯỚC 2: Tính tổng tiền -----------
         BigDecimal totalAmount = productInfos.stream()
                 .map(p -> {
                     int qty = orderRequest.getOrderItems().stream()
                             .filter(i -> i.getProductId().equals(p.getId()))
-                            .findFirst()
-                            .get().getQuantity();
+                            .findFirst().get().getQuantity();
                     return BigDecimal.valueOf(p.getPrice()).multiply(BigDecimal.valueOf(qty));
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // ✅ 4. Lưu order ở trạng thái PENDING
+        // ----------- BƯỚC 3: Lưu order PENDING -----------
         Order order = new Order();
         order.setCustomerId(orderRequest.getCustomerId());
-
-        List<OrderItem> orderItems = orderRequest.getOrderItems().stream().map(item -> {
-            ProductResponse product = productInfos.stream()
-                    .filter(p -> p.getId().equals(item.getProductId()))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductId()));
-
+        order.setOrderItems(orderRequest.getOrderItems().stream().map(item -> {
             OrderItem orderItem = new OrderItem();
             orderItem.setProductId(item.getProductId());
             orderItem.setQuantity(item.getQuantity());
+            ProductResponse product = productInfos.stream()
+                    .filter(p -> p.getId().equals(item.getProductId()))
+                    .findFirst().orElseThrow();
             orderItem.setPrice(BigDecimal.valueOf(product.getPrice())
-                    .multiply(BigDecimal.valueOf(item.getQuantity()))); // ✅ tính giá
-
+                    .multiply(BigDecimal.valueOf(item.getQuantity())));
             return orderItem;
-        }).collect(Collectors.toList());
-
-        order.setOrderItems(orderItems);
+        }).collect(Collectors.toList()));
         order.setOrderDate(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
         order.setTotalAmount(totalAmount);
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} saved as PENDING", savedOrder.getId());
 
-        // ✅ 5. Kiểm tra tồn kho
-        InventoryRequest inventoryRequest = new InventoryRequest();
-        inventoryRequest.setOrderId(savedOrder.getId());
-        inventoryRequest.setItems(orderRequest.getOrderItems());
-
+        // ----------- BƯỚC 4: Kiểm tra tồn kho -----------
+        InventoryRequest inventoryRequest = new InventoryRequest(savedOrder.getId(), orderRequest.getOrderItems());
         InventoryResponse inventoryResponse = (InventoryResponse) rabbitTemplate.convertSendAndReceive(
-                INVENTORY_EXCHANGE,
-                INVENTORY_ROUTING_KEY,
-                inventoryRequest
-        );
+                INVENTORY_EXCHANGE, INVENTORY_ROUTING_KEY, inventoryRequest);
 
         if (inventoryResponse == null || !inventoryResponse.isAvailable()) {
-            log.warn("Inventory not enough for order {}", savedOrder.getId());
-            orderRepository.deleteById(savedOrder.getId()); // ❗XÓA KHỎI DB
+            orderRepository.deleteById(savedOrder.getId());
             throw new RuntimeException("Order failed: Not enough stock!");
         }
 
-        // ✅ 6. Xác nhận đơn hàng
-        savedOrder.setStatus(OrderStatus.CONFIRMED);
+        // ----------- BƯỚC 5: Gửi PaymentRequest qua RabbitMQ -----------
+        PaymentRequest paymentRequest = new PaymentRequest(savedOrder.getId(), totalAmount, "COD");
+        PaymentResponse paymentResponse = (PaymentResponse) rabbitTemplate.convertSendAndReceive(
+                PAYMENT_EXCHANGE, PAYMENT_ROUTING_KEY, paymentRequest);
+
+        if (paymentResponse == null || !"SUCCESS".equals(paymentResponse.getStatus())) {
+            savedOrder.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(savedOrder);
+            throw new RuntimeException("Payment failed for order " + savedOrder.getId());
+        }
+
+        // ----------- BƯỚC 6: Update trạng thái PAID -----------
+        savedOrder.setStatus(OrderStatus.PAID);
         orderRepository.save(savedOrder);
 
-        // ✅ 7. Trả về response
+        // ----------- BƯỚC 7: Trả về OrderResponse -----------
         return OrderResponse.builder()
                 .orderId(savedOrder.getId())
                 .customerName(customerResponse.getFullName())
                 .orderDate(savedOrder.getOrderDate())
                 .status(savedOrder.getStatus())
-                .items(
-                        productInfos.stream().map(p -> {
-                            int qty = orderRequest.getOrderItems().stream()
-                                    .filter(i -> i.getProductId().equals(p.getId()))
-                                    .findFirst()
-                                    .get().getQuantity();
-                            return OrderItemResponse.builder()
-                                    .productId(p.getId())
-                                    .productName(p.getName())
-                                    .quantity(qty)
-                                    .price(BigDecimal.valueOf(p.getPrice()))
-                                    .total(BigDecimal.valueOf(p.getPrice()).multiply(BigDecimal.valueOf(qty)))
-                                    .build();
-                        }).collect(Collectors.toList())
-                )
+                .items(productInfos.stream().map(p -> {
+                    int qty = orderRequest.getOrderItems().stream()
+                            .filter(i -> i.getProductId().equals(p.getId()))
+                            .findFirst().get().getQuantity();
+                    return new OrderItemResponse(p.getId(), p.getName(),
+                            qty, BigDecimal.valueOf(p.getPrice()),
+                            BigDecimal.valueOf(p.getPrice()).multiply(BigDecimal.valueOf(qty)));
+                }).collect(Collectors.toList()))
                 .totalAmount(totalAmount)
                 .build();
     }

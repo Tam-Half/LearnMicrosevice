@@ -1,16 +1,16 @@
 package intern.lp.dto.request;
 
-import intern.lp.entites.OrderItem;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class InventoryRequest {
+public class PaymentRequest {
     private Long orderId;
-    private List<OrderItem> items;
+    private BigDecimal amount;
+    private String paymentMethod; // "COD", "VNPAY", "MOMO"...
 }

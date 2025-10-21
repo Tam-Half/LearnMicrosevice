@@ -4,6 +4,7 @@ package intern.lp.controller;
 import intern.lp.dto.request.PaymentRequest;
 import intern.lp.dto.response.PaymentResponse;
 import intern.lp.service.PaymentService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,11 +12,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/payments")
 public class PaymentController {
 
-    private final PaymentService paymentService;
+    @Autowired
+    private  PaymentService paymentService;
 
-    public PaymentController(PaymentService paymentService) {
-        this.paymentService = paymentService;
-    }
 
     @PostMapping
     public ResponseEntity<PaymentResponse> createPayment(@RequestBody PaymentRequest req) {
