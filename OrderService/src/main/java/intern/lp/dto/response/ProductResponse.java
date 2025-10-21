@@ -9,6 +9,5 @@ public class ProductResponse {
     private double price;
     private String  description;
     private String status ;
-
 }
 

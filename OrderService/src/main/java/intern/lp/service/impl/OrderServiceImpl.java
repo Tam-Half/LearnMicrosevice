@@ -40,85 +40,100 @@ public class OrderServiceImpl {
 
     public OrderResponse createOrder(OrderRequest orderRequest) {
 
-        // ✅ 1. Gọi product-service để lấy thông tin sản phẩm
+        // ✅ 1. Gọi product-service lấy thông tin sản phẩm
         List<ProductResponse> productInfos = orderRequest.getOrderItems().stream()
                 .map(item -> {
                     ProductResponse product = productClient.getProductById(item.getProductId());
-                    log.info("Call product-service success, product: {}", product);
+                    log.info("Fetched product: {}", product);
                     return product;
                 })
                 .collect(Collectors.toList());
 
-        log.info("orderRequest.getCustomerId() " + orderRequest.getCustomerId());
-        // ✅ 2. Gọi customer-service lấy thông tin khách hàng
+        // ✅ 2. Gọi customer-service
         CustomerResponse customerResponse = customerClient.getCustomerById(orderRequest.getCustomerId());
+        if (customerResponse == null || customerResponse.getFullName() == null) {
+            throw new RuntimeException("Customer not found with id: " + orderRequest.getCustomerId());
+        }
 
-       log.info("CUSTOMER " + customerResponse);
+        // ✅ 3. Tính totalAmount trước
+        BigDecimal totalAmount = productInfos.stream()
+                .map(p -> {
+                    int qty = orderRequest.getOrderItems().stream()
+                            .filter(i -> i.getProductId().equals(p.getId()))
+                            .findFirst()
+                            .get().getQuantity();
+                    return BigDecimal.valueOf(p.getPrice()).multiply(BigDecimal.valueOf(qty));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // ✅ 3. Lưu đơn hàng trước (PENDING) -> tạo orderId để gửi qua Inventory
+        // ✅ 4. Lưu order ở trạng thái PENDING
         Order order = new Order();
         order.setCustomerId(orderRequest.getCustomerId());
+
+        List<OrderItem> orderItems = orderRequest.getOrderItems().stream().map(item -> {
+            ProductResponse product = productInfos.stream()
+                    .filter(p -> p.getId().equals(item.getProductId()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProductId()));
+
+            OrderItem orderItem = new OrderItem();
+            orderItem.setProductId(item.getProductId());
+            orderItem.setQuantity(item.getQuantity());
+            orderItem.setPrice(BigDecimal.valueOf(product.getPrice())
+                    .multiply(BigDecimal.valueOf(item.getQuantity()))); // ✅ tính giá
+
+            return orderItem;
+        }).collect(Collectors.toList());
+
+        order.setOrderItems(orderItems);
         order.setOrderDate(LocalDateTime.now());
         order.setStatus(OrderStatus.PENDING);
-        order.setOrderItems(orderRequest.getOrderItems());
+        order.setTotalAmount(totalAmount);
         Order savedOrder = orderRepository.save(order);
-        log.info("Order saved temporarily with ID = {} (status PENDING)", savedOrder.getId());
+        log.info("Order {} saved as PENDING", savedOrder.getId());
 
-        // ✅ 4. Gửi yêu cầu Inventory kèm orderId để kiểm tra tồn kho
+        // ✅ 5. Kiểm tra tồn kho
         InventoryRequest inventoryRequest = new InventoryRequest();
         inventoryRequest.setOrderId(savedOrder.getId());
         inventoryRequest.setItems(orderRequest.getOrderItems());
 
-        log.info("Sending inventory check for order {}...", savedOrder.getId());
         InventoryResponse inventoryResponse = (InventoryResponse) rabbitTemplate.convertSendAndReceive(
                 INVENTORY_EXCHANGE,
                 INVENTORY_ROUTING_KEY,
                 inventoryRequest
         );
 
-        if (inventoryResponse == null) {
-            throw new RuntimeException("Inventory Service Timeout!");
+        if (inventoryResponse == null || !inventoryResponse.isAvailable()) {
+            log.warn("Inventory not enough for order {}", savedOrder.getId());
+            orderRepository.deleteById(savedOrder.getId()); // ❗XÓA KHỎI DB
+            throw new RuntimeException("Order failed: Not enough stock!");
         }
 
-        // ✅ 5. Nếu không đủ hàng => hủy đơn
-        if (!inventoryResponse.isAvailable()) {
-            savedOrder.setStatus(OrderStatus.CANCELED);
-            orderRepository.save(savedOrder);
-            throw new RuntimeException("Order canceled: Inventory not enough for products: "
-                    + inventoryResponse.getUnavailableItems());
-        }
-
-        // ✅ 6. Nếu đủ hàng => xác nhận đơn
+        // ✅ 6. Xác nhận đơn hàng
         savedOrder.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(savedOrder);
-        log.info("Order {} confirmed successfully!", savedOrder.getId());
 
-        // ✅ 7. Trả về thông tin order đầy đủ
-        List<OrderItemResponse> itemResponses = savedOrder.getOrderItems().stream().map(item -> {
-            ProductResponse product = productInfos.stream()
-                    .filter(p -> p.getId().equals(item.getProductId()))
-                    .findFirst()
-                    .orElseThrow();
-            BigDecimal total = BigDecimal.valueOf(product.getPrice() * item.getQuantity());
-            return OrderItemResponse.builder()
-                    .productId(item.getProductId())
-                    .productName(product.getName())
-                    .quantity(item.getQuantity())
-                    .price(BigDecimal.valueOf(product.getPrice()))
-                    .total(total)
-                    .build();
-        }).collect(Collectors.toList());
-
-        BigDecimal totalAmount = itemResponses.stream()
-                .map(OrderItemResponse::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        // ✅ 7. Trả về response
         return OrderResponse.builder()
                 .orderId(savedOrder.getId())
                 .customerName(customerResponse.getFullName())
                 .orderDate(savedOrder.getOrderDate())
                 .status(savedOrder.getStatus())
-                .items(itemResponses)
+                .items(
+                        productInfos.stream().map(p -> {
+                            int qty = orderRequest.getOrderItems().stream()
+                                    .filter(i -> i.getProductId().equals(p.getId()))
+                                    .findFirst()
+                                    .get().getQuantity();
+                            return OrderItemResponse.builder()
+                                    .productId(p.getId())
+                                    .productName(p.getName())
+                                    .quantity(qty)
+                                    .price(BigDecimal.valueOf(p.getPrice()))
+                                    .total(BigDecimal.valueOf(p.getPrice()).multiply(BigDecimal.valueOf(qty)))
+                                    .build();
+                        }).collect(Collectors.toList())
+                )
                 .totalAmount(totalAmount)
                 .build();
     }
