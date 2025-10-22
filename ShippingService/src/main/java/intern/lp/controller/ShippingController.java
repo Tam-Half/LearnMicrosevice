@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.*;
 public class ShippingController {
 
     private final ShippingService shippingService;
-
-    @PostMapping
-    public ShippingResponse createShipping(@RequestBody ShippingRequest request) {
-        return shippingService.createShipping(request);
-    }
+//
+//    @PostMapping
+//    public ShippingResponse createShipping(@RequestBody ShippingRequest request) {
+//        return shippingService.createShipping(request);
+//    }
+//}
 }

@@ -14,5 +14,4 @@ import java.util.Map;
 @RequestMapping("/api/inventory")
 public class InventoryController {
 
-
 }

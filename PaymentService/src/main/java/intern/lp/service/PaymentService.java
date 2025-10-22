@@ -7,4 +7,5 @@ public interface PaymentService {
     PaymentResponse createPayment(PaymentRequest request);
     PaymentResponse getPayment(Long id);
     PaymentResponse getByOrderId(Long orderId);
+    void handlePaymentRequest(PaymentRequest request);
 }

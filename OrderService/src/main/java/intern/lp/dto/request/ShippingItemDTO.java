@@ -1,16 +1,21 @@
 package intern.lp.dto.request;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+
 @Data
-public class OrderItemRequest implements Serializable {
+@NoArgsConstructor
+@AllArgsConstructor
+public class ShippingItemDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private Long id;
     private Long productId;
+    private String productName;
     private Integer quantity;
     private BigDecimal price;
 }

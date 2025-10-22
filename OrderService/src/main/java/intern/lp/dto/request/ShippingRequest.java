@@ -1,26 +1,30 @@
 package intern.lp.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@Setter
-@Getter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class ShippingRequest {
+public class ShippingRequest implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private Long orderId;
     private Long customerId;
     private String customerName;
     private String customerPhone;
     private String customerEmail;
     private String shippingAddress;
-    private List<OrderRequest.OrderItem> orderItems;
+    private List<ShippingItemDTO> orderItems;
     private BigDecimal totalAmount;
     private LocalDateTime orderDate;
 }

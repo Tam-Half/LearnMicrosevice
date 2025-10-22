@@ -1,6 +1,9 @@
 package intern.lp.enums;
 
 public enum OrderStatus {
-    PENDING, CONFIRMED,CANCELED, DELIVERED, CANCELLED, PAID;
-
+    PENDING,
+    CONFIRMED,
+    PAID,
+    CANCELED,   // 1 'L', trùng với SQL
+    DELIVERED,
 }

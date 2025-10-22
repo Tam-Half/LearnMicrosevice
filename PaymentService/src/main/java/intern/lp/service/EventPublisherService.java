@@ -1,26 +1,31 @@
 package intern.lp.service;
 
-import intern.lp.event.PaymentCreatedEvent;
+import intern.lp.event.PaymentCompletedEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class EventPublisherService {
 
     private final RabbitTemplate rabbitTemplate;
-    private final String exchange;
-    private final String routingKey;
 
-    public EventPublisherService(RabbitTemplate rabbitTemplate,
-                                 @Value("${payment.exchange}") String exchange,
-                                 @Value("${payment.routing.created}") String routingKey) {
-        this.rabbitTemplate = rabbitTemplate;
-        this.exchange = exchange;
-        this.routingKey = routingKey;
-    }
+    // Hardcode giá trị hoặc dùng từ properties
+    private static final String PAYMENT_EXCHANGE = "payment-exchange";
+    private static final String PAYMENT_COMPLETED_KEY = "payment.completed";
 
-    public void publishPaymentCreated(PaymentCreatedEvent event) {
-        rabbitTemplate.convertAndSend(exchange, routingKey, event);
+    public void publishPaymentCompleted(PaymentCompletedEvent event) {
+        try {
+            rabbitTemplate.convertAndSend(PAYMENT_EXCHANGE, PAYMENT_COMPLETED_KEY, event);
+            log.info("Payment completed event published for order {}, status: {}",
+                    event.getOrderId(), event.getStatus());
+        } catch (Exception e) {
+            log.error("Failed to publish payment completed event for order {}: {}",
+                    event.getOrderId(), e.getMessage());
+            // Không throw exception để không ảnh hưởng đến response
+        }
     }
 }

@@ -16,11 +16,11 @@ public class PaymentController {
     private  PaymentService paymentService;
 
 
-    @PostMapping
-    public ResponseEntity<PaymentResponse> createPayment(@RequestBody PaymentRequest req) {
-        PaymentResponse resp = paymentService.createPayment(req);
-        return ResponseEntity.ok(resp);
-    }
+//    @PostMapping
+//    public ResponseEntity<PaymentResponse> createPayment(@RequestBody PaymentRequest req) {
+//        PaymentResponse resp = paymentService.handlePaymentRequest(req);
+//        return ResponseEntity.ok(resp);
+//    }
 
     @GetMapping("/{id}")
     public ResponseEntity<PaymentResponse> getPayment(@PathVariable Long id) {

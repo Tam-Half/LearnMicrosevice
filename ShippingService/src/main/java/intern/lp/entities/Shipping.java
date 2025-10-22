@@ -3,38 +3,35 @@ package intern.lp.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 
 @Entity
-@Table(name = "shippings")
-@AllArgsConstructor
+@Table(name = "shipping")
+@Data
+@Builder
 @NoArgsConstructor
-@Getter
-@Setter
-@NonNull
+@AllArgsConstructor
 public class Shipping {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "order_id", nullable = false)
     private Long orderId;
-
-    @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
-    @Column(name = "address", nullable = false)
+    private String customerName;
+    private String customerPhone;
+    private String customerEmail;
+
     private String address;
+    private String orderItems;
+    private BigDecimal totalAmount;
+    private LocalDateTime orderDate;
 
-    @Column(nullable = false)
-    private String status; // CREATED, SHIPPED, DELIVERED
-
-    @Column(name = "created_at")
+    private String status;
     private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-
 }

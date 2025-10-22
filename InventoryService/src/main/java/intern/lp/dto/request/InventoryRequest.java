@@ -1,6 +1,8 @@
 package intern.lp.dto.request;
 
 import lombok.*;
+
+import java.io.Serializable;
 import java.util.List;
 
 @Getter
@@ -8,7 +10,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InventoryRequest {
+public class InventoryRequest implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private Long orderId;
     private List<OrderItem> items;
 
