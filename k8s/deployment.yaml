@@ -24,6 +24,7 @@ spec:
             - mountPath: /run/src/main/resources/application.properties
               name: application-properties-config-volume
               subPath: application.properties
+              
       volumes:
         - name: application-properties-config-volume
           configMap:
