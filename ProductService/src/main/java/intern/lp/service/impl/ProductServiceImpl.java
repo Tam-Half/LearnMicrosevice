@@ -6,6 +6,7 @@ import intern.lp.dto.ProductResponse;
 import intern.lp.entities.Product;
 import intern.lp.mapper.ProductMapper;
 import intern.lp.repository.ProductRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 @Service
+@Slf4j
 public class ProductServiceImpl {
 
     @Autowired
