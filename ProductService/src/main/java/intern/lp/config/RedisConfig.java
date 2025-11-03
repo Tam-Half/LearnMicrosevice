@@ -1,20 +1,22 @@
 package intern.lp.config;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.SocketOptions;
 import io.lettuce.core.TimeoutOptions;
-import org.springframework.boot.autoconfigure.data.redis.LettuceClientConfigurationBuilderCustomizer;
+import io.lettuce.core.resource.ClientResources;
+import io.lettuce.core.resource.DefaultClientResources;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.*;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -27,9 +29,10 @@ import java.time.Duration;
 @EnableCaching
 public class RedisConfig {
 
-    /**
-     * Redis Sentinel configuration with password
-     */
+    // ==============================
+    // 🔹 Redis Sentinel Config
+    // ==============================
+    @Primary
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         RedisSentinelConfiguration sentinelConfig = new RedisSentinelConfiguration()
@@ -41,60 +44,62 @@ public class RedisConfig {
         sentinelConfig.setPassword(RedisPassword.of("redispsswd"));
         sentinelConfig.setSentinelPassword(RedisPassword.of("redispsswd"));
 
-        return new LettuceConnectionFactory(sentinelConfig);
+        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
+                .commandTimeout(Duration.ofSeconds(10))
+                .readFrom(ReadFrom.REPLICA_PREFERRED)
+                .clientOptions(ClientOptions.builder()
+                        .autoReconnect(true)
+                        .socketOptions(SocketOptions.builder()
+                                .connectTimeout(Duration.ofSeconds(10))
+                                .keepAlive(true)
+                                .build())
+                        .timeoutOptions(TimeoutOptions.builder()
+                                .fixedTimeout(Duration.ofSeconds(10))
+                                .build())
+                        .build())
+                .clientResources(clientResources())
+                .build();
+
+        return new LettuceConnectionFactory(sentinelConfig, clientConfig);
     }
 
-    /**
-     * Lettuce client configuration
-     */
-    @Bean
-    public LettuceClientConfigurationBuilderCustomizer lettuceClientConfigurationBuilderCustomizer() {
-        return clientConfigurationBuilder -> {
-            SocketOptions socketOptions = SocketOptions.builder()
-                    .connectTimeout(Duration.ofSeconds(10))
-                    .keepAlive(true)
-                    .build();
-
-            TimeoutOptions timeoutOptions = TimeoutOptions.builder()
-                    .fixedTimeout(Duration.ofSeconds(10))
-                    .build();
-
-            ClientOptions clientOptions = ClientOptions.builder()
-                    .socketOptions(socketOptions)
-                    .timeoutOptions(timeoutOptions)
-                    .autoReconnect(true)
-                    .build();
-
-            clientConfigurationBuilder
-                    .clientOptions(clientOptions)
-                    .readFrom(ReadFrom.REPLICA_PREFERRED)
-                    .commandTimeout(Duration.ofSeconds(10));
-        };
+    @Bean(destroyMethod = "shutdown")
+    public ClientResources clientResources() {
+        return DefaultClientResources.create();
     }
 
-    /**
-     * RedisTemplate for manual Redis operations
-     */
+    // ==============================
+    // 🔹 ObjectMapper for Redis (FIXED)
+    // ==============================
+    private ObjectMapper redisObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+
+        // Tự động đăng ký modules (JavaTimeModule, etc.)
+        mapper.findAndRegisterModules();
+
+        // Tắt serialization timestamps cho Date/Time
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        // KHÔNG dùng activateDefaultTyping() để tránh lỗi type mismatch
+        // Chỉ serialize pure JSON, không thêm type information
+
+        return mapper;
+    }
+
+    // ==============================
+    // 🔹 RedisTemplate
+    // ==============================
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
+        GenericJackson2JsonRedisSerializer jsonSerializer =
+                new GenericJackson2JsonRedisSerializer(redisObjectMapper());
+
         template.setKeySerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        // Use modern polymorphic type validator
-        objectMapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder()
-                        .allowIfBaseType(Object.class)
-                        .build(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
-
-        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
         template.setValueSerializer(jsonSerializer);
         template.setHashValueSerializer(jsonSerializer);
 
@@ -102,26 +107,22 @@ public class RedisConfig {
         return template;
     }
 
-    /**
-     * CacheManager for @Cacheable
-     */
+    // ==============================
+    // 🔹 CacheManager
+    // ==============================
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.activateDefaultTyping(
-                BasicPolymorphicTypeValidator.builder()
-                        .allowIfBaseType(Object.class)
-                        .build(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY
-        );
-
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+        GenericJackson2JsonRedisSerializer serializer =
+                new GenericJackson2JsonRedisSerializer(redisObjectMapper());
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
-                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer))
+                .serializeKeysWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())
+                )
+                .serializeValuesWith(
+                        RedisSerializationContext.SerializationPair.fromSerializer(serializer)
+                )
                 .disableCachingNullValues()
                 .prefixCacheNameWith("app:");
 
