@@ -5,6 +5,9 @@ import intern.lp.dto.response.InventoryResponse;
 import intern.lp.entites.Inventory;
 import intern.lp.repository.InventoryRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.Exchange;
+import org.springframework.amqp.rabbit.annotation.Queue;
+import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,7 +24,11 @@ public class InventoryServiceImpl {
     @Autowired
     private InventoryRepository inventoryRepository;
 
-    @RabbitListener(queues = INVENTORY_QUEUE)
+     @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "inventory_check", durable = "true"),
+            exchange = @Exchange(name = "inventory-exchange", type = "direct"),
+            key = "inventory.check"
+    ))
     public InventoryResponse checkInventory(InventoryRequest request) {
 
         log.info("📦 Received inventory check for Order ID: {}", request.getOrderId());
