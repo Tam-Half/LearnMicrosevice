@@ -1,11 +1,5 @@
-# Run stage
-FROM openjdk:17-jdk-slim
-
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
-
-COPY target/OrderService-0.0.1-SNAPSHOT.jar /run/OrderService-0.0.1-SNAPSHOT.jar
-
-EXPOSE 8083
-
-ENTRYPOINT java -jar /run/OrderService-0.0.1-SNAPSHOT.jar --spring.config.location=/run/src/main/resources/application.properties
-
+COPY target/*.jar app.jar
+EXPOSE 8084
+ENTRYPOINT ["java", "-jar", "app.jar"]

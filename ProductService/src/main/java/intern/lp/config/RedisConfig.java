@@ -1,7 +1,9 @@
 package intern.lp.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.SocketOptions;
@@ -15,13 +17,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.*;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.serializer.*;
 
 import java.time.Duration;
 
@@ -69,25 +70,25 @@ public class RedisConfig {
     }
 
     // ==============================
-    // 🔹 ObjectMapper for Redis (FIXED)
+    // 🔹 ObjectMapper for Redis (với type info)
     // ==============================
     private ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
-
-        // Tự động đăng ký modules (JavaTimeModule, etc.)
         mapper.findAndRegisterModules();
-
-        // Tắt serialization timestamps cho Date/Time
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        // KHÔNG dùng activateDefaultTyping() để tránh lỗi type mismatch
-        // Chỉ serialize pure JSON, không thêm type information
-
+        
+        // ✅ Kích hoạt type information để tránh LinkedHashMap
+        mapper.activateDefaultTyping(
+                LaissezFaireSubTypeValidator.instance,
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY
+        );
+        
         return mapper;
     }
 
     // ==============================
-    // 🔹 RedisTemplate
+    // 🔹 RedisTemplate chung
     // ==============================
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -95,39 +96,37 @@ public class RedisConfig {
         template.setConnectionFactory(connectionFactory);
 
         StringRedisSerializer stringSerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer jsonSerializer =
+        GenericJackson2JsonRedisSerializer genericSerializer =
                 new GenericJackson2JsonRedisSerializer(redisObjectMapper());
 
         template.setKeySerializer(stringSerializer);
         template.setHashKeySerializer(stringSerializer);
-        template.setValueSerializer(jsonSerializer);
-        template.setHashValueSerializer(jsonSerializer);
+        template.setValueSerializer(genericSerializer);
+        template.setHashValueSerializer(genericSerializer);
 
         template.afterPropertiesSet();
         return template;
     }
 
     // ==============================
-    // 🔹 CacheManager
+    // 🔹 CacheManager với type info
     // ==============================
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        GenericJackson2JsonRedisSerializer serializer =
+
+        // ✅ Sử dụng ObjectMapper có type info
+        GenericJackson2JsonRedisSerializer genericSerializer =
                 new GenericJackson2JsonRedisSerializer(redisObjectMapper());
 
-        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(10))
-                .serializeKeysWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer())
-                )
-                .serializeValuesWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(serializer)
-                )
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(genericSerializer))
                 .disableCachingNullValues()
                 .prefixCacheNameWith("app:");
 
-        return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(config)
+        return RedisCacheManager.builder(RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory))
+                .cacheDefaults(defaultConfig)
                 .transactionAware()
                 .build();
     }

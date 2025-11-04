@@ -6,5 +6,11 @@ spring:
       server:
         git:
           uri: https://github.com/Tam-Half/MicroserviceConfigServer
+          clone-on-start: true
+          force-pull: true
+        overrides:
+          DB_HOST: ${DB_HOST}
+          DB_USER: ${DB_USER}
+          DB_PASS: ${DB_PASS}
 server:
   port: 8888
