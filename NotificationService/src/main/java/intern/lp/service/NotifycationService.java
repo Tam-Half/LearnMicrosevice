@@ -38,7 +38,7 @@ public class NotifycationService {
 
         // Gửi email
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(" @gmail.com");
+        message.setTo(" tam.half28@gmail.com");
         message.setSubject("New Order Notification - Order #" + shipping.getOrderId());
         message.setText(emailText);
 
