@@ -2,7 +2,7 @@ name: CI/CD Orderservice
 
 on:
   push:
-    branches: [main]
+    branches: [production]
   workflow_dispatch:
     inputs:
       version:
