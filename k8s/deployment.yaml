@@ -1,32 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${NAME_DEPLOYMENT}
+  name: configserver-deployment
   labels:
-    app: ${APP_LABEL}
-  namespace: staging
+    app: configserver
+  namespace: argocdtesting
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ${APP_LABEL}
+      app: configserver
   template:
     metadata:
       labels:
-        app: ${APP_LABEL}
+        app: configserver
     spec:
       containers:
-        - name: ${NAMESERVICE_CONTAINER}
-          image: ${USER_DOCKER_HUB}/${REPOSITORY}:${IMAGE_TAG}
+        - name: configserver-container
+          image: tamtran0210/config-server:02
           ports:
             - containerPort: 120
-          volumeMounts:
-            - mountPath: /run/src/main/resources/application.properties
-              name: application-properties-config-volume
-              subPath: application.properties
-              
-      volumes:
-        - name: application-properties-config-volume
-          configMap:
-            name: orderservice-backend-application-properties-configmap
-        #Thêm Cmt 
+
